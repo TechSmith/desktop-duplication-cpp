@@ -2,8 +2,6 @@
 #include "stable.h"
 
 #include "base_renderer.h"
-
-#include "meta/optional.h"
 #include <memory>
 
 
@@ -112,5 +110,5 @@ private:
       std::unique_ptr<DirectX::SpriteFont> m_Font;
 	};
 
-	meta::optional<resources> dx_m;
+	std::unique_ptr<resources> dx_m;
 };

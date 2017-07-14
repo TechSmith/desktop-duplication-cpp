@@ -7,7 +7,6 @@
 #include <meta/tuple.h>
 
 #include <vector>
-#include <optional>
 #include <thread>
 
 struct captured_update;
@@ -54,7 +53,7 @@ private:
 	void initDuplication();
 	void handleDeviceError(const char* text, HRESULT result, std::initializer_list<HRESULT> expected);
 
-	std::optional<captured_update> captureUpdate();
+	captured_update captureUpdate();
 
 private:
 	callbacks* callbacks_m;

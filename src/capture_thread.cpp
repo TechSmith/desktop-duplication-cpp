@@ -89,9 +89,10 @@ void capture_thread::run() {
 				auto frame = captureUpdate();
             frame.captureFPS = (int)frameRate;
             frame.capturedFrames = frames;
-				if (frame) {
-					callbacks_m->setFrame(std::move(*frame), context_m, index_m);
+				//if (frame) {
+					callbacks_m->setFrame(std::move(frame), context_m, index_m);
 					doCapture_m = false;
+				//}
             clock_t endFrame = clock();
 
             deltaTime += endFrame - beginFrame;
@@ -165,13 +166,13 @@ void capture_thread::handleDeviceError(const char* text, HRESULT result, std::in
 	throw Unexpected{ text };
 }
 
-std::optional<captured_update> capture_thread::captureUpdate() {
+captured_update capture_thread::captureUpdate() {
 	captured_update update;
 	auto time = 50;
 	ComPtr<IDXGIResource> resource;
 	DXGI_OUTDUPL_FRAME_INFO frame_info;
 	auto result = dupl_m->AcquireNextFrame(time, &frame_info, &resource);
-	if (DXGI_ERROR_WAIT_TIMEOUT == result) return {};
+	//if (DXGI_ERROR_WAIT_TIMEOUT == result) return {};
 	if (IS_ERROR(result)) throw Expected{ "Failed to acquire next frame in capture_thread" };
 
 	update.frame.frames = frame_info.AccumulatedFrames;

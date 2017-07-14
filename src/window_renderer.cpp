@@ -12,7 +12,7 @@
 using error = renderer::error;
 
 void window_renderer::init(init_args&& args) {
-	dx_m.emplace(std::move(args));
+   dx_m.reset( new resources( std::move( args ) ) );
 	windowHandle_m = args.windowHandle;
 
 	RECT rect;
@@ -21,7 +21,7 @@ void window_renderer::init(init_args&& args) {
 }
 
 void window_renderer::reset() {
-	dx_m.reset();
+	//dx_m.reset();
 }
 
 bool window_renderer::resize(SIZE size) {
@@ -48,9 +48,8 @@ void window_renderer::moveOffset(POINT delta) {
 void window_renderer::moveToBorder(int x, int y) {
 	auto next = offset_m;
 
-	auto& dx = *dx_m;
 	D3D11_TEXTURE2D_DESC texture_description;
-	dx.backgroundTexture_m->GetDesc(&texture_description);
+   dx_m->backgroundTexture_m->GetDesc(&texture_description);
 
 	if (0 > x) next.x = 0;
 	else if (0 < x) next.x = -float(texture_description.Width) + (size_m.cx / zoom_m);
@@ -67,30 +66,29 @@ void window_renderer::moveTo(vec2f offset) {
 }
 
 void window_renderer::render() {
-	auto& dx = *dx_m;
 	if (pendingResizeBuffers_m) {
 		pendingResizeBuffers_m = false;
-		dx.renderTarget_m.Reset();
+      dx_m->renderTarget_m.Reset();
 		resizeSwapBuffer();
-		dx.createRenderTarget();
+      dx_m->createRenderTarget();
 	}
 
-	dx.clearRenderTarget({ 0,0,0,0 });
+   dx_m->clearRenderTarget({ 0,0,0,0 });
 
-	dx.deviceContext()->GenerateMips(dx.backgroundTextureShaderResource_m.Get());
+   dx_m->deviceContext()->GenerateMips( dx_m->backgroundTextureShaderResource_m.Get());
 
 	setViewPort();
-	dx.activateRenderTarget();
+   dx_m->activateRenderTarget();
 
-	dx.activateLinearSampler();
-	dx.activateVertexShader();
-	dx.activateDiscreteSampler();
-	dx.activatePlainPixelShader();
-	dx.activateBackgroundTexture();
-	dx.activateNoBlendState();
-	dx.activateTriangleList();
-	dx.activateBackgroundVertexBuffer();
-	dx.deviceContext()->Draw(6, 0);
+	dx_m->activateLinearSampler();
+	dx_m->activateVertexShader();
+	dx_m->activateDiscreteSampler();
+	dx_m->activatePlainPixelShader();
+	dx_m->activateBackgroundTexture();
+	dx_m->activateNoBlendState();
+	dx_m->activateTriangleList();
+	dx_m->activateBackgroundVertexBuffer();
+	dx_m->deviceContext()->Draw(6, 0);
 }
 
 void window_renderer::renderPointer(const pointer_buffer& pointer) {
@@ -99,23 +97,22 @@ void window_renderer::renderPointer(const pointer_buffer& pointer) {
 	if (!pointer.visible) return;
 	updatePointerVertices(pointer);
 
-	auto& dx = *dx_m;
-	dx.activatePointerVertexBuffer();
+   dx_m->activatePointerVertexBuffer();
 
 	if (pointer.shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR) {
-		dx.activateAlphaBlendState();
-		dx.activatePlainPixelShader();
-		dx.activatePointerTexture();
+		dx_m->activateAlphaBlendState();
+		dx_m->activatePlainPixelShader();
+		dx_m->activatePointerTexture();
 	}
 	else {
 		auto index = 1;
 		// dx.activateNoBlendState(); -- already set
-		dx.activatePointerTexture(index);
-		dx.activateDiscreteSampler(index);
-		dx.activateMaskedPixelShader();
+		dx_m->activatePointerTexture(index);
+		dx_m->activateDiscreteSampler(index);
+		dx_m->activateMaskedPixelShader();
 	}
 
-	dx.deviceContext()->Draw(6, 0);
+   dx_m->deviceContext()->Draw(6, 0);
 }
 
 void window_renderer::renderFPS( int captureFPS, unsigned long frames )
@@ -128,19 +125,17 @@ void window_renderer::renderFPS( int captureFPS, unsigned long frames )
 }
 
 void window_renderer::swap() {
-	auto& dx = *dx_m;
-	dx.activateNoRenderTarget();
+   dx_m->activateNoRenderTarget();
 
-	auto result = dx.swapChain_m->Present(1, 0);
+	auto result = dx_m->swapChain_m->Present(1, 0);
 	if (IS_ERROR(result)) throw error{ result, "Failed to swap buffers" };
 }
 
 
 void window_renderer::resizeSwapBuffer() {
-	auto& dx = *dx_m;
 	DXGI_SWAP_CHAIN_DESC description;
-	dx.swapChain_m->GetDesc(&description);
-	auto result = dx.swapChain_m->ResizeBuffers(
+   dx_m->swapChain_m->GetDesc(&description);
+	auto result = dx_m->swapChain_m->ResizeBuffers(
 		description.BufferCount,
 		size_m.cx, size_m.cy,
 		description.BufferDesc.Format, description.Flags);
@@ -148,9 +143,8 @@ void window_renderer::resizeSwapBuffer() {
 }
 
 void window_renderer::setViewPort() {
-	auto& dx = *dx_m;
 	D3D11_TEXTURE2D_DESC texture_description;
-	dx.backgroundTexture_m->GetDesc(&texture_description);
+   dx_m->backgroundTexture_m->GetDesc(&texture_description);
 
 	D3D11_VIEWPORT view_port;
 	view_port.Width = float(texture_description.Width) * zoom_m;
@@ -160,7 +154,7 @@ void window_renderer::setViewPort() {
 	view_port.TopLeftX = float(offset_m.x) * zoom_m;
 	view_port.TopLeftY = float(offset_m.y) * zoom_m;
 
-	dx.deviceContext()->RSSetViewports(1, &view_port);
+   dx_m->deviceContext()->RSSetViewports(1, &view_port);
 }
 
 void window_renderer::updatePointerShape(const pointer_buffer & pointer) {
@@ -211,11 +205,10 @@ void window_renderer::updatePointerShape(const pointer_buffer & pointer) {
 		resource_data.SysMemPitch = width * sizeof(color);
 	}
 
-	auto& dx = *dx_m;
-	auto result = dx.device()->CreateTexture2D(
+	auto result = dx_m->device()->CreateTexture2D(
 		&texture_description,
 		&resource_data,
-		&dx.pointerTexture_m);
+		&dx_m->pointerTexture_m);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_description;
 	shader_resource_description.Format = texture_description.Format;
@@ -223,17 +216,15 @@ void window_renderer::updatePointerShape(const pointer_buffer & pointer) {
 	shader_resource_description.Texture2D.MostDetailedMip = texture_description.MipLevels - 1;
 	shader_resource_description.Texture2D.MipLevels = texture_description.MipLevels;
 
-	result = dx.device()->CreateShaderResourceView(
-		dx.pointerTexture_m.Get(),
+	result = dx_m->device()->CreateShaderResourceView(
+      dx_m->pointerTexture_m.Get(),
 		&shader_resource_description,
-		&dx.pointerTextureShaderResource_m);
+		&dx_m->pointerTextureShaderResource_m);
 }
 
 void window_renderer::updatePointerVertices(const pointer_buffer & pointer) {
 	if (pointer.position_timestamp == lastPointerPositionUpdate_m) return;
 	lastPointerPositionUpdate_m = pointer.position_timestamp;
-
-	auto& dx = *dx_m;
 
 	vertex vertices[] = {
 		vertex{ -1.0f, -1.0f, 0.0f, 1.0f },
@@ -245,7 +236,7 @@ void window_renderer::updatePointerVertices(const pointer_buffer & pointer) {
 	};
 
 	D3D11_TEXTURE2D_DESC texture_description;
-	dx.backgroundTexture_m->GetDesc(&texture_description);
+   dx_m->backgroundTexture_m->GetDesc(&texture_description);
 
 	auto texture_size = SIZE{ (int)texture_description.Width, (int)texture_description.Height };
 	auto center = POINT{ texture_size.cx / 2, texture_size.cy / 2 };
@@ -269,7 +260,7 @@ void window_renderer::updatePointerVertices(const pointer_buffer & pointer) {
 	mouse_to_desktop(vertices[4], 0, 0);
 	mouse_to_desktop(vertices[5], size.cx, 0);
 
-	dx.deviceContext()->UpdateSubresource(dx.pointerVertexBuffer_m.Get(), 0, nullptr, vertices, 0, 0);
+   dx_m->deviceContext()->UpdateSubresource( dx_m->pointerVertexBuffer_m.Get(), 0, nullptr, vertices, 0, 0);
 }
 
 window_renderer::resources::resources(window_renderer::init_args&& args)

@@ -68,9 +68,6 @@
     <ClInclude Include="src\meta\string_view.h">
       <Filter>src\meta</Filter>
     </ClInclude>
-    <ClInclude Include="src\meta\optional.h">
-      <Filter>src\meta</Filter>
-    </ClInclude>
     <ClInclude Include="src\application.h">
       <Filter>src</Filter>
     </ClInclude>
